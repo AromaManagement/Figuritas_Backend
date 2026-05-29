@@ -20,11 +20,11 @@ app.use("/api/album", albumRoutes);
 app.use("/api/collection", collectionRoutes);
 
 app.get("/", (_req, res) => {
-  res.json({ message: "Figuritas API running" });
+    res.json({ message: "Figuritas API running" });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
 
 export default app;

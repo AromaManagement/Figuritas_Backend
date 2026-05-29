@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { authMiddleware } from "../middleware/auth";
 import {
-  getCollection,
-  updateCollection,
-  searchBySticker,
+    getCollection,
+    updateCollection,
+    searchBySticker,
 } from "../controllers/collectionController";
 
 const router = Router();
