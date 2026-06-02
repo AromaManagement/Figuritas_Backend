@@ -19,7 +19,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/album", albumRoutes);
 app.use("/api/collection", collectionRoutes);
-app.use("/api/trade", tradeRoutes);
+app.use("/api/trades", tradeRoutes);
 
 app.get("/", (_req, res) => {
     res.json({ message: "Figuritas API running" });

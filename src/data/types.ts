@@ -31,6 +31,6 @@ export interface Trade {
   requestedSticker: Sticker;
   offeredSticker: Sticker[];
   partner: TradePartner;
-  status: "declined" | "ongoing" | "accepted";
+  status: "declined" | "ongoing" | "accepted" | "completed";
   direction?: "incoming" | "outgoing";
 }

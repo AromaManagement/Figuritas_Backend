@@ -34,7 +34,7 @@ export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
 export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
     try {
         const trades = await prisma.trade.findMany({
-            where: { requesterId: req.userId, status: "ongoing" },
+            where: { requesterId: req.userId },
             include: {
                 recipient: {
                     select: { id: true, username: true },
