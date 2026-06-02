@@ -166,6 +166,7 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
 
         // Transfer stickers between users
         await prisma.$transaction([
+            // Requester gives requested sticker to recipient
             prisma.userCard.updateMany({
                 where: {
                     userId: trade.requesterId,
@@ -175,15 +176,59 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                     quantity: { decrement: 1 },
                 },
             }),
-            prisma.userCard.updateMany({
+            prisma.userCard.upsert({
                 where: {
-                    userId: trade.requesterId,
-                    stickerId: trade.requestedStickerId,
+                    userId_stickerId: {
+                        userId: trade.recipientId,
+                        stickerId: trade.requestedStickerId,
+                    },
                 },
-                data: {
+                update: {
                     quantity: { increment: 1 },
                 },
+                create: {
+                    userId: trade.recipientId,
+                    stickerId: trade.requestedStickerId,
+                    quantity: 1,
+                    available: 0,
+                    needed: false,
+                },
             }),
+
+            // Recipient gives offered stickers to requester
+            ...trade.offeredStickerId.map((stickerId) =>
+                prisma.userCard.updateMany({
+                    where: {
+                        userId: trade.recipientId,
+                        stickerId,
+                    },
+                    data: {
+                        quantity: { decrement: 1 },
+                    },
+                })
+            ),
+            ...trade.offeredStickerId.map((stickerId) =>
+                prisma.userCard.upsert({
+                    where: {
+                        userId_stickerId: {
+                            userId: trade.requesterId,
+                            stickerId,
+                        },
+                    },
+                    update: {
+                        quantity: { increment: 1 },
+                    },
+                    create: {
+                        userId: trade.requesterId,
+                        stickerId,
+                        quantity: 1,
+                        available: 0,
+                        needed: false,
+                    },
+                })
+            ),
+
+            // Update trade status to completed
             prisma.trade.update({
                 where: { id: tradeId },
                 data: { status: "completed" },
