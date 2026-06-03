@@ -29,6 +29,10 @@ export const getTrade = async (req: AuthRequest, res: Response) => {
             return res.status(404).json({ error: "Trade not found" });
         }
 
+        if (trade.requesterId !== req.userId && trade.recipientId !== req.userId) {
+            return res.status(403).json({ error: "You are not a participant in this trade" });
+        }
+
         const partner = trade.requesterId === req.userId ? trade.recipient : trade.requester;
         if (!(trade.status === "accepted" || trade.status === "completed")) {
             // Only return phone number if trade is accepted or completed
