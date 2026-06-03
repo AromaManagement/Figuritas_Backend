@@ -1,26 +1,25 @@
-import { Response } from "express";
-import prisma from "../lib/prisma";
-import { AuthRequest } from "../middleware/auth";
-import { fullAlbum } from "../data/album";
-
-const shouldExposePhone = (status: string) => status === "accepted" || status === "completed";
-const formatPartner = <T extends { phonenumber?: string | null }>(partner: T, status: string) => ({
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.completeTrade = exports.updateTradeStatus = exports.requestTrade = exports.getOutgoingTrades = exports.getIncomingTrades = exports.getTrade = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const album_1 = require("../data/album");
+const shouldExposePhone = (status) => status === "accepted" || status === "completed";
+const formatPartner = (partner, status) => ({
     ...partner,
     phonenumber: shouldExposePhone(status) ? (partner.phonenumber ?? "") : "",
 });
 const partnerSelectFields = { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true };
-
-
-export const getTrade = async (req: AuthRequest, res: Response) => {
+const getTrade = async (req, res) => {
     try {
         const tradeIdParam = req.params.id;
         const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
-
         if (!tradeId) {
             return res.status(400).json({ error: "tradeId is required" });
         }
-
-        const trade = await prisma.trade.findUnique({
+        const trade = await prisma_1.default.trade.findUnique({
             where: { id: tradeId },
             include: {
                 requester: {
@@ -31,36 +30,32 @@ export const getTrade = async (req: AuthRequest, res: Response) => {
                 },
             },
         });
-        
         if (!trade) {
             return res.status(404).json({ error: "Trade not found" });
         }
-
         if (trade.requesterId !== req.userId && trade.recipientId !== req.userId) {
             return res.status(403).json({ error: "You are not a participant in this trade" });
         }
-
         const partner = trade.requesterId === req.userId ? trade.recipient : trade.requester;
-
         const formattedTrade = {
             id: trade.id,
-            requestedSticker: fullAlbum.find((s) => s.id === trade.requestedStickerId),
-            offeredSticker: fullAlbum.filter((s) => trade.offeredStickerId.includes(s.id)),
+            requestedSticker: album_1.fullAlbum.find((s) => s.id === trade.requestedStickerId),
+            offeredSticker: album_1.fullAlbum.filter((s) => trade.offeredStickerId.includes(s.id)),
             partner: formatPartner(partner, trade.status),
             status: trade.status,
             direction: trade.requesterId === req.userId ? "outgoing" : "incoming",
         };
-
         return res.json(formattedTrade);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Get trade error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
-
-export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
+exports.getTrade = getTrade;
+const getIncomingTrades = async (req, res) => {
     try {
-        const trades = await prisma.trade.findMany({
+        const trades = await prisma_1.default.trade.findMany({
             where: { recipientId: req.userId },
             include: {
                 requester: {
@@ -68,26 +63,25 @@ export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
                 },
             },
         });
-        
         const formattedTrades = trades.map((t) => ({
             id: t.id,
-            requestedSticker: fullAlbum.find((s) => s.id === t.requestedStickerId),
-            offeredSticker: fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
+            requestedSticker: album_1.fullAlbum.find((s) => s.id === t.requestedStickerId),
+            offeredSticker: album_1.fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
             partner: formatPartner(t.requester, t.status),
             status: t.status,
             direction: "incoming",
         }));
-        
         return res.json(formattedTrades);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Get incoming trades error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
-
-export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
+exports.getIncomingTrades = getIncomingTrades;
+const getOutgoingTrades = async (req, res) => {
     try {
-        const trades = await prisma.trade.findMany({
+        const trades = await prisma_1.default.trade.findMany({
             where: { requesterId: req.userId },
             include: {
                 recipient: {
@@ -95,107 +89,94 @@ export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
                 },
             },
         });
-        
         const formattedTrades = trades.map((t) => ({
             id: t.id,
-            requestedSticker: fullAlbum.find((s) => s.id === t.requestedStickerId),
-            offeredSticker: fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
+            requestedSticker: album_1.fullAlbum.find((s) => s.id === t.requestedStickerId),
+            offeredSticker: album_1.fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
             partner: formatPartner(t.recipient, t.status),
             status: t.status,
             direction: "outgoing",
         }));
-
         return res.json(formattedTrades);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Get outgoing trades error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
-
-export const requestTrade = async (req: AuthRequest, res: Response) => {
+exports.getOutgoingTrades = getOutgoingTrades;
+const requestTrade = async (req, res) => {
     try {
         const { requestedStickerId, offeredStickerId, recipientId } = req.body;
-        
         if (!requestedStickerId || !offeredStickerId || !recipientId) {
             return res.status(400).json({ error: "requestedStickerId, offeredStickerId and recipientId are required" });
         }
-
-        const trade = await prisma.trade.create({
+        const trade = await prisma_1.default.trade.create({
             data: {
                 requestedStickerId,
                 offeredStickerId,
-                requesterId: req.userId!,
+                requesterId: req.userId,
                 recipientId,
                 status: "ongoing",
             },
         });
-        
         return res.status(201).json(trade);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Request trade error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
-}
-
-export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
+};
+exports.requestTrade = requestTrade;
+const updateTradeStatus = async (req, res) => {
     try {
         const tradeIdParam = req.params.id;
         const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
         const { status } = req.body;
-        
         if (!tradeId) {
             return res.status(400).json({ error: "tradeId is required" });
         }
-        
         if (!["accepted", "declined"].includes(status)) {
             return res.status(400).json({ error: "Invalid status" });
         }
-
-        const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
-
+        const trade = await prisma_1.default.trade.findUnique({ where: { id: tradeId } });
         if (!trade) {
             return res.status(404).json({ error: "Trade not found" });
         }
-
-        if (trade.recipientId !== req.userId) return res.status(403).json({ error: "Only the trade recipient can update the status" });
-        if (trade.status !== "ongoing") return res.status(400).json({ error: "Only ongoing trades can be updated" });
-
-        const updatedTrade = await prisma.trade.update({ where: { id: tradeId }, data: { status } });
-
+        if (trade.recipientId !== req.userId)
+            return res.status(403).json({ error: "Only the trade recipient can update the status" });
+        if (trade.status !== "ongoing")
+            return res.status(400).json({ error: "Only ongoing trades can be updated" });
+        const updatedTrade = await prisma_1.default.trade.update({ where: { id: tradeId }, data: { status } });
         return res.json(updatedTrade);
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Update trade status error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
-
-export const completeTrade = async (req: AuthRequest, res: Response) => {
+exports.updateTradeStatus = updateTradeStatus;
+const completeTrade = async (req, res) => {
     try {
         const tradeIdParam = req.params.id;
         const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
-        
         if (!tradeId) {
             return res.status(400).json({ error: "tradeId is required" });
         }
-
-        const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
-        
+        const trade = await prisma_1.default.trade.findUnique({ where: { id: tradeId } });
         if (!trade) {
             return res.status(404).json({ error: "Trade not found" });
         }
-
         if (trade.requesterId !== req.userId && trade.recipientId !== req.userId) {
             return res.status(403).json({ error: "You are not a participant in this trade" });
         }
-
         if (trade.status !== "accepted") {
             return res.status(400).json({ error: "Only accepted trades can be completed" });
         }
-
         // Check if both users still have the stickers they offered/requested
         // Recipient is who received the trade request -> must have the requested sticker 
         // Requester is who sent the trade request -> must have the offered stickers
-        const recipientCard = await prisma.userCard.findUnique({
+        const recipientCard = await prisma_1.default.userCard.findUnique({
             where: {
                 userId_stickerId: {
                     userId: trade.recipientId,
@@ -203,27 +184,23 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                 },
             },
         });
-
         if (!recipientCard || recipientCard.quantity < 1) {
             return res.status(400).json({ error: "Recipient does not have the requested sticker" });
         }
-
-        const requesterCards = await prisma.userCard.findMany({
+        const requesterCards = await prisma_1.default.userCard.findMany({
             where: {
                 userId: trade.requesterId,
                 stickerId: { in: trade.offeredStickerId },
                 quantity: { gt: 0 },
             },
         });
-
-        if (requesterCards.length  !== trade.offeredStickerId.length) {
+        if (requesterCards.length !== trade.offeredStickerId.length) {
             return res.status(400).json({ error: "Requester does not have all the offered stickers" });
         }
-
         // Transfer stickers between users
-        await prisma.$transaction([
+        await prisma_1.default.$transaction([
             // Recipient gives requested sticker to requester
-            prisma.userCard.updateMany({
+            prisma_1.default.userCard.updateMany({
                 where: {
                     userId: trade.recipientId,
                     stickerId: trade.requestedStickerId,
@@ -232,7 +209,7 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                     quantity: { decrement: 1 },
                 },
             }),
-            prisma.userCard.upsert({
+            prisma_1.default.userCard.upsert({
                 where: {
                     userId_stickerId: {
                         userId: trade.requesterId,
@@ -250,50 +227,46 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                     needed: false,
                 },
             }),
-
             // Requester gives offered stickers to recipient
-            ...trade.offeredStickerId.map((stickerId) =>
-                prisma.userCard.updateMany({
-                    where: {
-                        userId: trade.requesterId,
-                        stickerId,
-                    },
-                    data: {
-                        quantity: { decrement: 1 },
-                    },
-                })
-            ),
-            ...trade.offeredStickerId.map((stickerId) =>
-                prisma.userCard.upsert({
-                    where: {
-                        userId_stickerId: {
-                            userId: trade.recipientId,
-                            stickerId,
-                        },
-                    },
-                    update: {
-                        quantity: { increment: 1 },
-                    },
-                    create: {
+            ...trade.offeredStickerId.map((stickerId) => prisma_1.default.userCard.updateMany({
+                where: {
+                    userId: trade.requesterId,
+                    stickerId,
+                },
+                data: {
+                    quantity: { decrement: 1 },
+                },
+            })),
+            ...trade.offeredStickerId.map((stickerId) => prisma_1.default.userCard.upsert({
+                where: {
+                    userId_stickerId: {
                         userId: trade.recipientId,
                         stickerId,
-                        quantity: 1,
-                        available: 0,
-                        needed: false,
                     },
-                })
-            ),
-
+                },
+                update: {
+                    quantity: { increment: 1 },
+                },
+                create: {
+                    userId: trade.recipientId,
+                    stickerId,
+                    quantity: 1,
+                    available: 0,
+                    needed: false,
+                },
+            })),
             // Update trade status to completed
-            prisma.trade.update({
+            prisma_1.default.trade.update({
                 where: { id: tradeId },
                 data: { status: "completed" },
             }),
         ]);
-        
         return res.json({ message: "Trade completed successfully" });
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Complete trade error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
 };
+exports.completeTrade = completeTrade;
+//# sourceMappingURL=tradeController.js.map
