@@ -43,7 +43,7 @@ export const getTrade = async (req: AuthRequest, res: Response) => {
             status: trade.status,
             direction: trade.requesterId === req.userId ? "outgoing" : "incoming",
         };
-        
+
         return res.json(formattedTrade);
     } catch (error) {
         console.error("Get trade error:", error);
@@ -163,8 +163,9 @@ export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
 };
 
 export const completeTrade = async (req: AuthRequest, res: Response) => {
+    console.log("Complete trade request received");
     try {
-        const tradeIdParam = req.params.tradeId;
+        const tradeIdParam = req.params.id;
         const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
         
         if (!tradeId) {
@@ -186,37 +187,39 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
         }
 
         // Check if both users still have the stickers they offered/requested
-        const requesterCard = await prisma.userCard.findUnique({
+        // Recipient is who received the trade request -> must have the requested sticker 
+        // Requester is who sent the trade request -> must have the offered stickers
+        const recipientCard = await prisma.userCard.findUnique({
             where: {
                 userId_stickerId: {
-                    userId: trade.requesterId,
+                    userId: trade.recipientId,
                     stickerId: trade.requestedStickerId,
                 },
             },
         });
 
-        if (!requesterCard || requesterCard.quantity < 1) {
-            return res.status(400).json({ error: "Requester does not have the requested sticker" });
+        if (!recipientCard || recipientCard.quantity < 1) {
+            return res.status(400).json({ error: "Recipient does not have the requested sticker" });
         }
 
-        const recipientCards = await prisma.userCard.findMany({
+        const requesterCards = await prisma.userCard.findMany({
             where: {
-                userId: trade.recipientId,
+                userId: trade.requesterId,
                 stickerId: { in: trade.offeredStickerId },
                 quantity: { gt: 0 },
             },
         });
 
-        if (recipientCards.length  !== trade.offeredStickerId.length) {
-            return res.status(400).json({ error: "Recipient does not have all the offered stickers" });
+        if (requesterCards.length  !== trade.offeredStickerId.length) {
+            return res.status(400).json({ error: "Requester does not have all the offered stickers" });
         }
 
         // Transfer stickers between users
         await prisma.$transaction([
-            // Requester gives requested sticker to recipient
+            // Recipient gives requested sticker to requester
             prisma.userCard.updateMany({
                 where: {
-                    userId: trade.requesterId,
+                    userId: trade.recipientId,
                     stickerId: trade.requestedStickerId,
                 },
                 data: {
@@ -226,7 +229,7 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
             prisma.userCard.upsert({
                 where: {
                     userId_stickerId: {
-                        userId: trade.recipientId,
+                        userId: trade.requesterId,
                         stickerId: trade.requestedStickerId,
                     },
                 },
@@ -234,7 +237,7 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                     quantity: { increment: 1 },
                 },
                 create: {
-                    userId: trade.recipientId,
+                    userId: trade.requesterId,
                     stickerId: trade.requestedStickerId,
                     quantity: 1,
                     available: 0,
@@ -242,11 +245,11 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                 },
             }),
 
-            // Recipient gives offered stickers to requester
+            // Requester gives offered stickers to recipient
             ...trade.offeredStickerId.map((stickerId) =>
                 prisma.userCard.updateMany({
                     where: {
-                        userId: trade.recipientId,
+                        userId: trade.requesterId,
                         stickerId,
                     },
                     data: {
@@ -258,7 +261,7 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                 prisma.userCard.upsert({
                     where: {
                         userId_stickerId: {
-                            userId: trade.requesterId,
+                            userId: trade.recipientId,
                             stickerId,
                         },
                     },
@@ -266,7 +269,7 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                         quantity: { increment: 1 },
                     },
                     create: {
-                        userId: trade.requesterId,
+                        userId: trade.recipientId,
                         stickerId,
                         quantity: 1,
                         available: 0,
