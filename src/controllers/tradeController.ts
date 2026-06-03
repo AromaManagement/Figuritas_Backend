@@ -158,7 +158,6 @@ export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
         if (trade.status !== "ongoing") return res.status(400).json({ error: "Only ongoing trades can be updated" });
 
         const updatedTrade = await prisma.trade.update({ where: { id: tradeId }, data: { status } });
-        });
 
         return res.json(updatedTrade);
     } catch (error) {
