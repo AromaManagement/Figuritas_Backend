@@ -6,6 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.completeTrade = exports.updateTradeStatus = exports.requestTrade = exports.getOutgoingTrades = exports.getIncomingTrades = exports.getTrade = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const album_1 = require("../data/album");
+const shouldExposePhone = (status) => status === "accepted" || status === "completed";
+const formatPartner = (partner, status) => ({
+    ...partner,
+    phonenumber: shouldExposePhone(status) ? (partner.phonenumber ?? "") : "",
+});
+const partnerSelectFields = { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true };
 const getTrade = async (req, res) => {
     try {
         const tradeIdParam = req.params.id;
@@ -17,10 +23,10 @@ const getTrade = async (req, res) => {
             where: { id: tradeId },
             include: {
                 requester: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
                 recipient: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
             },
         });
@@ -31,15 +37,11 @@ const getTrade = async (req, res) => {
             return res.status(403).json({ error: "You are not a participant in this trade" });
         }
         const partner = trade.requesterId === req.userId ? trade.recipient : trade.requester;
-        if (!(trade.status === "accepted" || trade.status === "completed")) {
-            // Only return phone number if trade is accepted or completed
-            partner.phonenumber = "";
-        }
         const formattedTrade = {
             id: trade.id,
             requestedSticker: album_1.fullAlbum.find((s) => s.id === trade.requestedStickerId),
             offeredSticker: album_1.fullAlbum.filter((s) => trade.offeredStickerId.includes(s.id)),
-            partner: partner,
+            partner: formatPartner(partner, trade.status),
             status: trade.status,
             direction: trade.requesterId === req.userId ? "outgoing" : "incoming",
         };
@@ -57,7 +59,7 @@ const getIncomingTrades = async (req, res) => {
             where: { recipientId: req.userId },
             include: {
                 requester: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
             },
         });
@@ -65,10 +67,7 @@ const getIncomingTrades = async (req, res) => {
             id: t.id,
             requestedSticker: album_1.fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: album_1.fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: {
-                ...t.requester,
-                phonenumber: t.status === "accepted" || t.status === "completed" ? t.requester.phonenumber : "",
-            },
+            partner: formatPartner(t.requester, t.status),
             status: t.status,
             direction: "incoming",
         }));
@@ -86,7 +85,7 @@ const getOutgoingTrades = async (req, res) => {
             where: { requesterId: req.userId },
             include: {
                 recipient: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
             },
         });
@@ -94,10 +93,7 @@ const getOutgoingTrades = async (req, res) => {
             id: t.id,
             requestedSticker: album_1.fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: album_1.fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: {
-                ...t.recipient,
-                phonenumber: t.status === "accepted" || t.status === "completed" ? t.recipient.phonenumber : "",
-            },
+            partner: formatPartner(t.recipient, t.status),
             status: t.status,
             direction: "outgoing",
         }));

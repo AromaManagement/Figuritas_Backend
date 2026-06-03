@@ -94,7 +94,7 @@ The API will be available at `http://localhost:4000`.
 |---|---|---|---|
 | GET | `/api/collection` | ✓ | Get own sticker collection |
 | PUT | `/api/collection` | ✓ | Update own collection |
-| GET | `/api/collection/search?stickerId=` | ✓ | Find users who have a sticker available (includes contact/location data) |
+| GET | `/api/collection/search?stickerId=` | ✓ | Find users who have a sticker available (includes location data) |
 
 All protected routes require the header: `Authorization: Bearer <token>`
 

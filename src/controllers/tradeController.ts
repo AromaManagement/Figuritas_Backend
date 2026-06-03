@@ -3,6 +3,13 @@ import prisma from "../lib/prisma";
 import { AuthRequest } from "../middleware/auth";
 import { fullAlbum } from "../data/album";
 
+const shouldExposePhone = (status: string) => status === "accepted" || status === "completed";
+const formatPartner = <T extends { phonenumber?: string | null }>(partner: T, status: string) => ({
+    ...partner,
+    phonenumber: shouldExposePhone(status) ? (partner.phonenumber ?? "") : "",
+});
+const partnerSelectFields = { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true };
+
 
 export const getTrade = async (req: AuthRequest, res: Response) => {
     try {
@@ -17,10 +24,10 @@ export const getTrade = async (req: AuthRequest, res: Response) => {
             where: { id: tradeId },
             include: {
                 requester: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
                 recipient: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
             },
         });
@@ -34,16 +41,12 @@ export const getTrade = async (req: AuthRequest, res: Response) => {
         }
 
         const partner = trade.requesterId === req.userId ? trade.recipient : trade.requester;
-        if (!(trade.status === "accepted" || trade.status === "completed")) {
-            // Only return phone number if trade is accepted or completed
-            partner.phonenumber = ""
-        }
 
         const formattedTrade = {
             id: trade.id,
             requestedSticker: fullAlbum.find((s) => s.id === trade.requestedStickerId),
             offeredSticker: fullAlbum.filter((s) => trade.offeredStickerId.includes(s.id)),
-            partner: partner,
+            partner: formatPartner(partner, trade.status),
             status: trade.status,
             direction: trade.requesterId === req.userId ? "outgoing" : "incoming",
         };
@@ -61,7 +64,7 @@ export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
             where: { recipientId: req.userId },
             include: {
                 requester: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
             },
         });
@@ -70,10 +73,7 @@ export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
             id: t.id,
             requestedSticker: fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: {
-                ...t.requester,
-                phonenumber: t.status === "accepted" || t.status === "completed" ? t.requester.phonenumber : "",
-            },
+            partner: formatPartner(t.requester, t.status),
             status: t.status,
             direction: "incoming",
         }));
@@ -91,7 +91,7 @@ export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
             where: { requesterId: req.userId },
             include: {
                 recipient: {
-                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
+                    select: partnerSelectFields,
                 },
             },
         });
@@ -100,10 +100,7 @@ export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
             id: t.id,
             requestedSticker: fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: {
-                ...t.recipient,
-                phonenumber: t.status === "accepted" || t.status === "completed" ? t.recipient.phonenumber : "",
-            },
+            partner: formatPartner(t.recipient, t.status),
             status: t.status,
             direction: "outgoing",
         }));
