@@ -94,7 +94,7 @@ export const searchBySticker = async (req: AuthRequest, res: Response) => {
             },
             include: {
                 user: {
-                    select: { id: true, username: true, city: true, lat: true, lng: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });

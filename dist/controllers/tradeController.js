@@ -17,10 +17,10 @@ const getTrade = async (req, res) => {
             where: { id: tradeId },
             include: {
                 requester: {
-                    select: { id: true, username: true, phonenumber: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
                 recipient: {
-                    select: { id: true, username: true, phonenumber: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });
@@ -57,7 +57,7 @@ const getIncomingTrades = async (req, res) => {
             where: { recipientId: req.userId },
             include: {
                 requester: {
-                    select: { id: true, username: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });
@@ -65,7 +65,10 @@ const getIncomingTrades = async (req, res) => {
             id: t.id,
             requestedSticker: album_1.fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: album_1.fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: t.requester,
+            partner: {
+                ...t.requester,
+                phonenumber: t.status === "accepted" || t.status === "completed" ? t.requester.phonenumber : "",
+            },
             status: t.status,
             direction: "incoming",
         }));
@@ -83,7 +86,7 @@ const getOutgoingTrades = async (req, res) => {
             where: { requesterId: req.userId },
             include: {
                 recipient: {
-                    select: { id: true, username: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });
@@ -91,7 +94,10 @@ const getOutgoingTrades = async (req, res) => {
             id: t.id,
             requestedSticker: album_1.fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: album_1.fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: t.recipient,
+            partner: {
+                ...t.recipient,
+                phonenumber: t.status === "accepted" || t.status === "completed" ? t.recipient.phonenumber : "",
+            },
             status: t.status,
             direction: "outgoing",
         }));

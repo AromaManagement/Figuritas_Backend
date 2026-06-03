@@ -17,10 +17,10 @@ export const getTrade = async (req: AuthRequest, res: Response) => {
             where: { id: tradeId },
             include: {
                 requester: {
-                    select: { id: true, username: true,  phonenumber: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
                 recipient: {
-                    select: { id: true, username: true, phonenumber: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });
@@ -61,7 +61,7 @@ export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
             where: { recipientId: req.userId },
             include: {
                 requester: {
-                    select: { id: true, username: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });
@@ -70,7 +70,10 @@ export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
             id: t.id,
             requestedSticker: fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: t.requester,
+            partner: {
+                ...t.requester,
+                phonenumber: t.status === "accepted" || t.status === "completed" ? t.requester.phonenumber : "",
+            },
             status: t.status,
             direction: "incoming",
         }));
@@ -88,7 +91,7 @@ export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
             where: { requesterId: req.userId },
             include: {
                 recipient: {
-                    select: { id: true, username: true },
+                    select: { id: true, username: true, phonenumber: true, city: true, lat: true, lng: true },
                 },
             },
         });
@@ -97,7 +100,10 @@ export const getOutgoingTrades = async (req: AuthRequest, res: Response) => {
             id: t.id,
             requestedSticker: fullAlbum.find((s) => s.id === t.requestedStickerId),
             offeredSticker: fullAlbum.filter((s) => t.offeredStickerId.includes(s.id)),
-            partner: t.recipient,
+            partner: {
+                ...t.recipient,
+                phonenumber: t.status === "accepted" || t.status === "completed" ? t.recipient.phonenumber : "",
+            },
             status: t.status,
             direction: "outgoing",
         }));

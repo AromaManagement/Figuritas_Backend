@@ -21,6 +21,9 @@ export interface TradePartner {
     id: number;
     username: string;
     phonenumber?: string;
+    city?: string;
+    lat?: number;
+    lng?: number;
 }
 export interface Trade {
     id: string;
