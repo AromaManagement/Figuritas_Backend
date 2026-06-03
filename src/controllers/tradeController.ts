@@ -149,14 +149,15 @@ export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
         }
 
         const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
-        
+
         if (!trade) {
             return res.status(404).json({ error: "Trade not found" });
         }
 
-        const updatedTrade = await prisma.trade.update({
-            where: { id: tradeId },
-            data: { status },
+        if (trade.recipientId !== req.userId) return res.status(403).json({ error: "Only the trade recipient can update the status" });
+        if (trade.status !== "ongoing") return res.status(400).json({ error: "Only ongoing trades can be updated" });
+
+        const updatedTrade = await prisma.trade.update({ where: { id: tradeId }, data: { status } });
         });
 
         return res.json(updatedTrade);
