@@ -168,7 +168,6 @@ export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
 };
 
 export const completeTrade = async (req: AuthRequest, res: Response) => {
-    console.log("Complete trade request received");
     try {
         const tradeIdParam = req.params.id;
         const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
