@@ -11,6 +11,7 @@ model User {
   id           Int         @id @default(autoincrement())
   username     String      @unique
   email        String      @unique
+  phonenumber  String?
   passwordHash String      @map("password_hash")
   avatar       String?
   lat          Float?
@@ -21,6 +22,9 @@ model User {
   cards        UserCard[]
 
   @@map("users")
+
+  tradesRequested  Trade[]  @relation("TradeRequester")
+  tradesReceived   Trade[]  @relation("TradeRecipient")
 }
 
 // Represents the relationship between a user and a sticker.
@@ -40,4 +44,20 @@ model UserCard {
 
   @@unique([userId, stickerId])
   @@map("user_cards")
+}
+
+
+model Trade {
+  id                 String          @id @default(uuid())
+  requestedStickerId String
+  offeredStickerId   String[]       
+  status             String     @default("ongoing")
+
+  requesterId        Int
+  requester          User     @relation("TradeRequester", fields: [requesterId], references: [id])
+
+  recipientId        Int
+  recipient          User     @relation("TradeRecipient", fields: [recipientId], references: [id])
+
+  @@map("trades")
 }

@@ -5,10 +5,10 @@ import prisma from "../lib/prisma";
 
 export const register = async (req: Request, res: Response) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, phonenumber } = req.body;
 
-        if (!username || !email || !password) {
-            return res.status(400).json({ error: "username, email and password are required" });
+        if (!username || !email || !password || !phonenumber) {
+            return res.status(400).json({ error: "username, email, password and phonenumber are required" });
         }
 
         const existingUser = await prisma.user.findFirst({
@@ -22,7 +22,7 @@ export const register = async (req: Request, res: Response) => {
         const passwordHash = await bcrypt.hash(password, 10);
 
         const user = await prisma.user.create({
-            data: { username, email, passwordHash },
+            data: { username, email, passwordHash, phonenumber },
         });
 
         const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
@@ -30,7 +30,7 @@ export const register = async (req: Request, res: Response) => {
         });
 
         return res.status(201).json({
-            user: { id: user.id, username: user.username, email: user.email },
+            user: { id: user.id, username: user.username, email: user.email, phonenumber: user.phonenumber },
             token,
         });
     } catch (error) {

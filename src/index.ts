@@ -7,6 +7,7 @@ dotenv.config();
 import authRoutes from "./routes/auth";
 import albumRoutes from "./routes/album";
 import collectionRoutes from "./routes/collection";
+import tradeRoutes from "./routes/trade";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/album", albumRoutes);
 app.use("/api/collection", collectionRoutes);
+app.use("/api/trades", tradeRoutes);
 
 app.get("/", (_req, res) => {
     res.json({ message: "Figuritas API running" });

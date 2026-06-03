@@ -19,3 +19,18 @@ export interface Sticker {
     type: StickerType;
     img: string;           // URL
 }
+
+export interface TradePartner {
+    id: number;
+    username: string;
+    phonenumber?: string;
+}
+
+export interface Trade {
+  id: string;
+  requestedSticker: Sticker;
+  offeredSticker: Sticker[];
+  partner: TradePartner;
+  status: "declined" | "ongoing" | "accepted" | "completed";
+  direction?: "incoming" | "outgoing";
+}
