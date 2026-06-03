@@ -4,6 +4,53 @@ import { AuthRequest } from "../middleware/auth";
 import { fullAlbum } from "../data/album";
 
 
+export const getTrade = async (req: AuthRequest, res: Response) => {
+    try {
+        const tradeIdParam = req.params.id;
+        const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
+
+        if (!tradeId) {
+            return res.status(400).json({ error: "tradeId is required" });
+        }
+
+        const trade = await prisma.trade.findUnique({
+            where: { id: tradeId },
+            include: {
+                requester: {
+                    select: { id: true, username: true,  phonenumber: true },
+                },
+                recipient: {
+                    select: { id: true, username: true, phonenumber: true },
+                },
+            },
+        });
+        
+        if (!trade) {
+            return res.status(404).json({ error: "Trade not found" });
+        }
+
+        const partner = trade.requesterId === req.userId ? trade.recipient : trade.requester;
+        if (!(trade.status === "accepted" || trade.status === "completed")) {
+            // Only return phone number if trade is accepted or completed
+            partner.phonenumber = ""
+        }
+
+        const formattedTrade = {
+            id: trade.id,
+            requestedSticker: fullAlbum.find((s) => s.id === trade.requestedStickerId),
+            offeredSticker: fullAlbum.filter((s) => trade.offeredStickerId.includes(s.id)),
+            partner: partner,
+            status: trade.status,
+            direction: trade.requesterId === req.userId ? "outgoing" : "incoming",
+        };
+        
+        return res.json(formattedTrade);
+    } catch (error) {
+        console.error("Get trade error:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
+};
+
 export const getIncomingTrades = async (req: AuthRequest, res: Response) => {
     try {
         const trades = await prisma.trade.findMany({
@@ -85,7 +132,7 @@ export const requestTrade = async (req: AuthRequest, res: Response) => {
 
 export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
     try {
-        const tradeIdParam = req.params.tradeId;
+        const tradeIdParam = req.params.id;
         const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
         const { status } = req.body;
         
