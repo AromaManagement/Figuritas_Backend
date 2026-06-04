@@ -14,7 +14,6 @@ export const getCollection = async (req: AuthRequest, res: Response) => {
             return {
                 ...sticker,
                 quantity: uc.quantity,
-                available: uc.available,
                 needed: uc.needed,
             };
         });
@@ -50,14 +49,12 @@ export const updateCollection = async (req: AuthRequest, res: Response) => {
                 },
                 update: {
                     quantity: c.quantity,
-                    available: c.available,
                     needed: c.needed,
                 },
                 create: {
                     userId: req.userId!,
                     stickerId: c.stickerId,
                     quantity: c.quantity,
-                    available: c.available,
                     needed: c.needed,
                 },
             })
@@ -89,7 +86,7 @@ export const searchBySticker = async (req: AuthRequest, res: Response) => {
         const usersWithSticker = await prisma.userCard.findMany({
             where: {
                 stickerId,
-                available: { gt: 0 },
+                quantity: { gt: 1 },
                 userId: { not: req.userId },
             },
             include: {
@@ -103,7 +100,7 @@ export const searchBySticker = async (req: AuthRequest, res: Response) => {
         const myAvailableCards = await prisma.userCard.findMany({
             where: {
                 userId: req.userId,
-                available: { gt: 0 },
+                quantity: { gt: 1 },
             },
         });
 
@@ -119,13 +116,12 @@ export const searchBySticker = async (req: AuthRequest, res: Response) => {
                 .filter((myCard) => theirNeeds.some((need) => need.stickerId === myCard.stickerId))
                 .map((myCard) => ({
                     ...fullAlbum.find((s) => s.id === myCard.stickerId),
-                    available: myCard.available,
+                    quantity: myCard.quantity,
                 }));
 
             matches.push({
                 user: uc.user,
                 sticker,
-                available: uc.available,
                 possibleOffers,
             });
         }

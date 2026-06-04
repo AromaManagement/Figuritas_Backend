@@ -243,7 +243,6 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                     userId: trade.requesterId,
                     stickerId: trade.requestedStickerId,
                     quantity: 1,
-                    available: 0,
                     needed: false,
                 },
             }),
@@ -275,7 +274,6 @@ export const completeTrade = async (req: AuthRequest, res: Response) => {
                         userId: trade.recipientId,
                         stickerId,
                         quantity: 1,
-                        available: 0,
                         needed: false,
                     },
                 })
