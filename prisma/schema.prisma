@@ -28,17 +28,11 @@ model User {
 }
 
 // Represents the relationship between a user and a sticker.
-// Two possible states (mutually exclusive):
-//   - Owned:  quantity > 0, needed = false
-//             available = quantity minus copies committed to active trades
-//   - Wanted: quantity = 0, needed = true, available = 0
 model UserCard {
   id        Int     @id @default(autoincrement())
   userId    Int     @map("user_id")
   stickerId String  @map("sticker_id")  // references fullAlbum[].id
   quantity  Int     @default(0)
-  available Int     @default(0)         // quantity - copies committed to active trades
-  needed    Boolean @default(false)     // true only when quantity = 0 (user wants it for the album)
 
   user User @relation(fields: [userId], references: [id])
 
