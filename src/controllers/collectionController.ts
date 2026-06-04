@@ -113,19 +113,9 @@ export const searchBySticker = async (req: AuthRequest, res: Response) => {
                 select: { stickerId: true },
             });
             const otherUserStickerIds = otherUserStickerCards.map((c) => c.stickerId);
-            console.log("Other user sticker IDs:", otherUserStickerIds);
 
-            const possibleCardsToOffer = await prisma.userCard.findMany({
-                where: {
-                    userId: req.userId,
-                    quantity: { gt: 1 },
-                    stickerId: {
-                        notIn: otherUserStickerIds.length > 0 ? otherUserStickerIds : undefined,
-                    },
-                },
-            });
-            
-            const possibleOffers = possibleCardsToOffer
+            const possibleOffers = myAvailableCards
+                .filter((c) => !otherUserStickerIds.includes(c.stickerId))
                 .map((myCard) => ({
                     ...fullAlbum.find((s) => s.id === myCard.stickerId),
                     quantity: myCard.quantity,
