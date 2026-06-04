@@ -33,7 +33,6 @@ model UserCard {
   userId    Int     @map("user_id")
   stickerId String  @map("sticker_id")  // references fullAlbum[].id
   quantity  Int     @default(0)
-  needed    Boolean @default(false)     // true only when quantity = 0 (user wants it for the album)
 
   user User @relation(fields: [userId], references: [id])
 

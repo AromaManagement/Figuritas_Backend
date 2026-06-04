@@ -14,7 +14,6 @@ export const getCollection = async (req: AuthRequest, res: Response) => {
             return {
                 ...sticker,
                 quantity: uc.quantity,
-                needed: uc.needed,
             };
         });
 
@@ -49,13 +48,11 @@ export const updateCollection = async (req: AuthRequest, res: Response) => {
                 },
                 update: {
                     quantity: c.quantity,
-                    needed: c.needed,
                 },
                 create: {
                     userId: req.userId!,
                     stickerId: c.stickerId,
                     quantity: c.quantity,
-                    needed: c.needed,
                 },
             })
         );
@@ -106,14 +103,29 @@ export const searchBySticker = async (req: AuthRequest, res: Response) => {
 
         const matches = [];
         for (const uc of usersWithSticker) {
-            // What this user needs (wanted but not owned)
-            const theirNeeds = await prisma.userCard.findMany({
-                where: { userId: uc.user.id, needed: true },
+            // possibleOffers are the stickers I have available (quantity > 1) and
+            // that the other user doesn't have (quantity = 0 or no entry)
+            const otherUserStickerCards = await prisma.userCard.findMany({
+                where: {
+                    userId: uc.userId,
+                    quantity: { gt: 0 },
+                },
+                select: { stickerId: true },
             });
+            const otherUserStickerIds = otherUserStickerCards.map((c) => c.stickerId);
+            console.log("Other user sticker IDs:", otherUserStickerIds);
 
-            // Intersection: stickers I can offer that they need
-            const possibleOffers = myAvailableCards
-                .filter((myCard) => theirNeeds.some((need) => need.stickerId === myCard.stickerId))
+            const possibleCardsToOffer = await prisma.userCard.findMany({
+                where: {
+                    userId: req.userId,
+                    quantity: { gt: 1 },
+                    stickerId: {
+                        notIn: otherUserStickerIds.length > 0 ? otherUserStickerIds : undefined,
+                    },
+                },
+            });
+            
+            const possibleOffers = possibleCardsToOffer
                 .map((myCard) => ({
                     ...fullAlbum.find((s) => s.id === myCard.stickerId),
                     quantity: myCard.quantity,
