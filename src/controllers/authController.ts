@@ -1,39 +1,22 @@
 import { Request, Response } from "express";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import prisma from "../lib/prisma";
+import * as authService from "../services/authService";
+import { generateToken } from "../middleware/auth";
+import { ServiceError } from "../lib/errors";
 
 export const register = async (req: Request, res: Response) => {
     try {
         const { username, email, password, phonenumber } = req.body;
-
-        if (!username || !email || !password || !phonenumber) {
-            return res.status(400).json({ error: "username, email, password and phonenumber are required" });
-        }
-
-        const existingUser = await prisma.user.findFirst({
-            where: { OR: [{ email }, { username }] },
-        });
-
-        if (existingUser) {
-            return res.status(409).json({ error: "Email or username already in use" });
-        }
-
-        const passwordHash = await bcrypt.hash(password, 10);
-
-        const user = await prisma.user.create({
-            data: { username, email, passwordHash, phonenumber },
-        });
-
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
-            expiresIn: "7d",
-        });
+        const user = await authService.registerUser(username, email, password, phonenumber);
+        const token = generateToken(user.id);
 
         return res.status(201).json({
-            user: { id: user.id, username: user.username, email: user.email, phonenumber: user.phonenumber },
+            user,
             token,
         });
     } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error("Register error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
@@ -42,32 +25,17 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
-
-        if (!email || !password) {
-            return res.status(400).json({ error: "email and password are required" });
-        }
-
-        const user = await prisma.user.findUnique({ where: { email } });
-
-        if (!user) {
-            return res.status(401).json({ error: "Invalid credentials" });
-        }
-
-        const validPassword = await bcrypt.compare(password, user.passwordHash);
-
-        if (!validPassword) {
-            return res.status(401).json({ error: "Invalid credentials" });
-        }
-
-        const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET!, {
-            expiresIn: "7d",
-        });
+        const user = await authService.loginUser(email, password);
+        const token = generateToken(user.id);
 
         return res.json({
-            user: { id: user.id, username: user.username, email: user.email },
+            user,
             token,
         });
     } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error("Login error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }

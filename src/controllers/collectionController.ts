@@ -1,24 +1,16 @@
 import { Response } from "express";
-import prisma from "../lib/prisma";
 import { AuthRequest } from "../middleware/auth";
-import { fullAlbum } from "../data/album";
+import * as collectionService from "../services/collectionService";
+import { ServiceError } from "../lib/errors";
 
 export const getCollection = async (req: AuthRequest, res: Response) => {
     try {
-        const userCards = await prisma.userCard.findMany({
-            where: { userId: req.userId },
-        });
-
-        const collection = userCards.map((uc) => {
-            const sticker = fullAlbum.find((s) => s.id === uc.stickerId);
-            return {
-                ...sticker,
-                quantity: uc.quantity,
-            };
-        });
-
+        const collection = await collectionService.getCollection(req.userId!);
         return res.json(collection);
     } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error("Get collection error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
@@ -27,40 +19,12 @@ export const getCollection = async (req: AuthRequest, res: Response) => {
 export const updateCollection = async (req: AuthRequest, res: Response) => {
     try {
         const { cards } = req.body;
-
-        if (!Array.isArray(cards)) {
-            return res.status(400).json({ error: "cards must be an array" });
-        }
-
-        for (const c of cards) {
-            if (!fullAlbum.find((s) => s.id === c.stickerId)) {
-                return res.status(400).json({ error: `Sticker ${c.stickerId} does not exist in the album` });
-            }
-        }
-
-        const operations = cards.map((c: any) =>
-            prisma.userCard.upsert({
-                where: {
-                    userId_stickerId: {
-                        userId: req.userId!,
-                        stickerId: c.stickerId,
-                    },
-                },
-                update: {
-                    quantity: c.quantity,
-                },
-                create: {
-                    userId: req.userId!,
-                    stickerId: c.stickerId,
-                    quantity: c.quantity,
-                },
-            })
-        );
-
-        await prisma.$transaction(operations);
-
+        await collectionService.updateCollection(req.userId!, cards);
         return res.json({ message: "Collection updated" });
     } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error("Update collection error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }
@@ -69,67 +33,12 @@ export const updateCollection = async (req: AuthRequest, res: Response) => {
 export const searchBySticker = async (req: AuthRequest, res: Response) => {
     try {
         const { stickerId } = req.query;
-
-        if (!stickerId || typeof stickerId !== "string") {
-            return res.status(400).json({ error: "stickerId is required" });
-        }
-
-        const sticker = fullAlbum.find((s) => s.id === stickerId);
-        if (!sticker) {
-            return res.status(404).json({ error: "Sticker not found in the album" });
-        }
-
-        // Users who have this sticker available (excluding the requesting user)
-        const usersWithSticker = await prisma.userCard.findMany({
-            where: {
-                stickerId,
-                quantity: { gt: 1 },
-                userId: { not: req.userId },
-            },
-            include: {
-                user: {
-                    select: { id: true, username: true, city: true, lat: true, lng: true },
-                },
-            },
-        });
-
-        // Stickers the requesting user has available to offer
-        const myAvailableCards = await prisma.userCard.findMany({
-            where: {
-                userId: req.userId,
-                quantity: { gt: 1 },
-            },
-        });
-
-        const matches = [];
-        for (const uc of usersWithSticker) {
-            // possibleOffers are the stickers I have available (quantity > 1) and
-            // that the other user doesn't have (quantity = 0 or no entry)
-            const otherUserStickerCards = await prisma.userCard.findMany({
-                where: {
-                    userId: uc.userId,
-                    quantity: { gt: 0 },
-                },
-                select: { stickerId: true },
-            });
-            const otherUserStickerIds = otherUserStickerCards.map((c) => c.stickerId);
-
-            const possibleOffers = myAvailableCards
-                .filter((c) => !otherUserStickerIds.includes(c.stickerId))
-                .map((myCard) => ({
-                    ...fullAlbum.find((s) => s.id === myCard.stickerId),
-                    quantity: myCard.quantity,
-                }));
-
-            matches.push({
-                user: uc.user,
-                sticker,
-                possibleOffers,
-            });
-        }
-
+        const matches = await collectionService.searchBySticker(req.userId!, stickerId);
         return res.json(matches);
     } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
         console.error("Search error:", error);
         return res.status(500).json({ error: "Internal server error" });
     }

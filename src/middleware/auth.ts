@@ -5,6 +5,12 @@ export interface AuthRequest extends Request {
     userId?: number;
 }
 
+export const generateToken = (userId: number): string => {
+    return jwt.sign({ userId }, process.env.JWT_SECRET!, {
+        expiresIn: "7d",
+    });
+};
+
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 

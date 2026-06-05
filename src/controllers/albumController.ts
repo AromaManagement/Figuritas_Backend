@@ -1,14 +1,27 @@
 import { Request, Response } from "express";
-import { fullAlbum } from "../data/album";
+import * as albumService from "../services/albumService";
+import { ServiceError } from "../lib/errors";
 
 export const getAll = (_req: Request, res: Response) => {
-    return res.json(fullAlbum);
+    try {
+        const stickers = albumService.getAllAlbums();
+        return res.json(stickers);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const getById = (req: Request, res: Response) => {
-    const figurita = fullAlbum.find((f) => f.id === req.params.id);
-    if (!figurita) {
-        return res.status(404).json({ error: "Figurita no encontrada" });
+    try {
+        const sticker = albumService.getStickerById(req.params.id);
+        return res.json(sticker);
+    } catch (error) {
+        if (error instanceof ServiceError) {
+            return res.status(error.statusCode).json({ error: error.message });
+        }
+        return res.status(500).json({ error: "Internal server error" });
     }
-    return res.json(figurita);
 };
