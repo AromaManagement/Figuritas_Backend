@@ -33,6 +33,9 @@ export const updateCollection = async (req: AuthRequest, res: Response) => {
 export const searchBySticker = async (req: AuthRequest, res: Response) => {
     try {
         const { stickerId } = req.query;
+        if (!stickerId || typeof stickerId !== "string") {
+            return res.status(400).json({ error: "stickerId is required" });
+        }
         const matches = await collectionService.searchBySticker(req.userId!, stickerId);
         return res.json(matches);
     } catch (error) {

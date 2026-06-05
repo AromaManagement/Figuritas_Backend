@@ -5,7 +5,9 @@ import { ServiceError } from "../lib/errors";
 
 export const getTrade = async (req: AuthRequest, res: Response) => {
     try {
-        const trade = await tradeService.getTrade(req.userId!, req.params.id);
+        const tradeId = req.params.id;
+        if (!tradeId || typeof tradeId !== "string") return res.status(400).json({ error: "tradeId is required" });
+        const trade = await tradeService.getTrade(req.userId!, tradeId);
         return res.json(trade);
     } catch (error) {
         if (error instanceof ServiceError) {
@@ -58,8 +60,13 @@ export const requestTrade = async (req: AuthRequest, res: Response) => {
 
 export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
     try {
+        const tradeId = req.params.id;
+        if (!tradeId || typeof tradeId !== "string") return res.status(400).json({ error: "tradeId is required" });
         const { status } = req.body;
-        const updatedTrade = await tradeService.updateTradeStatus(req.userId!, req.params.id, status);
+        if (!["accepted", "declined"].includes(status)) {
+            return res.status(400).json({ error: "Invalid status" });
+        }
+        const updatedTrade = await tradeService.updateTradeStatus(req.userId!, tradeId, status as "accepted" | "declined");
         return res.json(updatedTrade);
     } catch (error) {
         if (error instanceof ServiceError) {
@@ -72,7 +79,9 @@ export const updateTradeStatus = async (req: AuthRequest, res: Response) => {
 
 export const completeTrade = async (req: AuthRequest, res: Response) => {
     try {
-        await tradeService.completeTrade(req.userId!, req.params.id);
+        const tradeId = req.params.id;
+        if (!tradeId || typeof tradeId !== "string") return res.status(400).json({ error: "tradeId is required" });
+        await tradeService.completeTrade(req.userId!, tradeId);
         return res.json({ message: "Trade completed successfully" });
     } catch (error) {
         if (error instanceof ServiceError) {

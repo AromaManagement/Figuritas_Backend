@@ -2,6 +2,8 @@ import prisma from "../lib/prisma";
 import { fullAlbum } from "../data/album";
 import { ServiceError } from "../lib/errors";
 
+type CardUpdate = { stickerId: string; quantity: number };
+
 export const getCollection = async (userId: number) => {
     const userCards = await prisma.userCard.findMany({
         where: { userId },
@@ -16,7 +18,7 @@ export const getCollection = async (userId: number) => {
     });
 };
 
-export const updateCollection = async (userId: number, cards: any) => {
+export const updateCollection = async (userId: number, cards: CardUpdate[]) => {
     if (!Array.isArray(cards)) {
         throw new ServiceError(400, "cards must be an array");
     }
@@ -27,7 +29,7 @@ export const updateCollection = async (userId: number, cards: any) => {
         }
     }
 
-    const operations = cards.map((c: any) =>
+    const operations = cards.map((c) =>
         prisma.userCard.upsert({
             where: {
                 userId_stickerId: {
@@ -49,7 +51,7 @@ export const updateCollection = async (userId: number, cards: any) => {
     await prisma.$transaction(operations);
 };
 
-export const searchBySticker = async (userId: number, stickerId: any) => {
+export const searchBySticker = async (userId: number, stickerId: string) => {
     if (!stickerId || typeof stickerId !== "string") {
         throw new ServiceError(400, "stickerId is required");
     }

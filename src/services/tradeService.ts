@@ -2,12 +2,7 @@ import prisma from "../lib/prisma";
 import { fullAlbum } from "../data/album";
 import { ServiceError } from "../lib/errors";
 
-export const getTrade = async (userId: number, tradeIdParam: any) => {
-    const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
-
-    if (!tradeId) {
-        throw new ServiceError(400, "tradeId is required");
-    }
+export const getTrade = async (userId: number, tradeId: string) => {
 
     const trade = await prisma.trade.findUnique({
         where: { id: tradeId },
@@ -85,7 +80,7 @@ export const getOutgoingTrades = async (userId: number) => {
     }));
 };
 
-export const requestTrade = async (userId: number, requestedStickerId: any, offeredStickerId: any, recipientId: any) => {
+export const requestTrade = async (userId: number, requestedStickerId: string, offeredStickerId: string[], recipientId: number) => {
     if (!requestedStickerId || !offeredStickerId || !recipientId) {
         throw new ServiceError(400, "requestedStickerId, offeredStickerId and recipientId are required");
     }
@@ -101,13 +96,7 @@ export const requestTrade = async (userId: number, requestedStickerId: any, offe
     });
 };
 
-export const updateTradeStatus = async (userId: number, tradeIdParam: any, status: any) => {
-    const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
-
-    if (!tradeId) {
-        throw new ServiceError(400, "tradeId is required");
-    }
-
+export const updateTradeStatus = async (userId: number, tradeId: string, status: "accepted" | "declined") => {
     if (!["accepted", "declined"].includes(status)) {
         throw new ServiceError(400, "Invalid status");
     }
@@ -129,12 +118,7 @@ export const updateTradeStatus = async (userId: number, tradeIdParam: any, statu
     return await prisma.trade.update({ where: { id: tradeId }, data: { status } });
 };
 
-export const completeTrade = async (userId: number, tradeIdParam: any) => {
-    const tradeId = Array.isArray(tradeIdParam) ? tradeIdParam[0] : tradeIdParam;
-
-    if (!tradeId) {
-        throw new ServiceError(400, "tradeId is required");
-    }
+export const completeTrade = async (userId: number, tradeId: string) => {
 
     const trade = await prisma.trade.findUnique({ where: { id: tradeId } });
 
